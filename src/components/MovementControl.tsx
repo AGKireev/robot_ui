@@ -1,31 +1,80 @@
 import React, { useEffect } from "react"
-import { Card, Button } from "react-bootstrap"
 import { useWebSocket } from "../contexts/WebSocketContext"
-import { sendCommand } from "../utils/websocket"
+import { Card } from "react-bootstrap"
 import {
-  CaretUpFill,
-  CaretDownFill,
-  CaretLeftFill,
-  CaretRightFill,
+  ArrowUpCircleFill,
+  ArrowLeftCircleFill,
+  ArrowDownCircleFill,
+  ArrowRightCircleFill,
   Joystick,
 } from "react-bootstrap-icons"
 
 export const MovementControl: React.FC = () => {
-  const ws = useWebSocket()
+  const { sendMessage } = useWebSocket()
+
+  const handleForward = async () => {
+    try {
+      await sendMessage({ command: "forward" })
+    } catch (error) {
+      console.error("Failed to move forward:", error)
+    }
+  }
+
+  const handleLeft = async () => {
+    try {
+      await sendMessage({ command: "left" })
+    } catch (error) {
+      console.error("Failed to turn left:", error)
+    }
+  }
+
+  const handleBackward = async () => {
+    try {
+      await sendMessage({ command: "backward" })
+    } catch (error) {
+      console.error("Failed to move backward:", error)
+    }
+  }
+
+  const handleRight = async () => {
+    try {
+      await sendMessage({ command: "right" })
+    } catch (error) {
+      console.error("Failed to turn right:", error)
+    }
+  }
+
+  const handleMoveStop = async () => {
+    try {
+      await sendMessage({ command: "move_stop" })
+    } catch (error) {
+      console.error("Failed to stop movement:", error)
+    }
+  }
+
+  const handleTurnStop = async () => {
+    try {
+      await sendMessage({ command: "turn_stop" })
+    } catch (error) {
+      console.error("Failed to stop turning:", error)
+    }
+  }
 
   const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.repeat) return // Prevent key repeat
+
     switch (event.key.toLowerCase()) {
       case "w":
-        sendCommand(ws, "forward")
-        break
-      case "a":
-        sendCommand(ws, "left")
+        handleForward()
         break
       case "s":
-        sendCommand(ws, "backward")
+        handleBackward()
+        break
+      case "a":
+        handleLeft()
         break
       case "d":
-        sendCommand(ws, "right")
+        handleRight()
         break
       default:
         break
@@ -33,11 +82,17 @@ export const MovementControl: React.FC = () => {
   }
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    if (["w", "s"].includes(event.key.toLowerCase())) {
-      sendCommand(ws, "move_stop")
-    }
-    if (["a", "d"].includes(event.key.toLowerCase())) {
-      sendCommand(ws, "turn_stop")
+    switch (event.key.toLowerCase()) {
+      case "w":
+      case "s":
+        handleMoveStop()
+        break
+      case "a":
+      case "d":
+        handleTurnStop()
+        break
+      default:
+        break
     }
   }
 
@@ -48,60 +103,54 @@ export const MovementControl: React.FC = () => {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [])
+  }, []) // Empty dependency array since handlers use function references
 
   return (
-    <Card className="shadow-sm">
-      <Joystick size={20} className="control-type-icon" />
-      <div className="movement-controls">
-        <div className="d-flex justify-content-center mb-2">
-          <Button
-            variant="primary"
-            className="control-btn"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => sendCommand(ws, "forward")}
-            onMouseUp={() => sendCommand(ws, "move_stop")}
-            onTouchStart={() => sendCommand(ws, "forward")}
-            onTouchEnd={() => sendCommand(ws, "move_stop")}
-          >
-            <CaretUpFill size={24} />
-          </Button>
-        </div>
-        <div className="d-flex justify-content-center">
-          <Button
-            variant="primary"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => sendCommand(ws, "left")}
-            onMouseUp={() => sendCommand(ws, "turn_stop")}
-            onTouchStart={() => sendCommand(ws, "left")}
-            onTouchEnd={() => sendCommand(ws, "turn_stop")}
-          >
-            <CaretLeftFill size={24} />
-          </Button>
-          <Button
-            variant="primary"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => sendCommand(ws, "backward")}
-            onMouseUp={() => sendCommand(ws, "move_stop")}
-            onTouchStart={() => sendCommand(ws, "backward")}
-            onTouchEnd={() => sendCommand(ws, "move_stop")}
-          >
-            <CaretDownFill size={24} />
-          </Button>
-          <Button
-            variant="primary"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => sendCommand(ws, "right")}
-            onMouseUp={() => sendCommand(ws, "turn_stop")}
-            onTouchStart={() => sendCommand(ws, "right")}
-            onTouchEnd={() => sendCommand(ws, "turn_stop")}
-          >
-            <CaretRightFill size={24} />
-          </Button>
-        </div>
+    <Card>
+      <Joystick size={24} className="control-type-icon" />
+      <div className="controls-grid">
+        <div></div>
+        <button
+          className="control-btn"
+          onMouseDown={handleForward}
+          onMouseUp={handleMoveStop}
+          onTouchStart={handleForward}
+          onTouchEnd={handleMoveStop}
+          title="Forward"
+        >
+          <ArrowUpCircleFill size={24} />
+        </button>
+        <div></div>
+        <button
+          className="control-btn"
+          onMouseDown={handleLeft}
+          onMouseUp={handleTurnStop}
+          onTouchStart={handleLeft}
+          onTouchEnd={handleTurnStop}
+          title="Turn Left"
+        >
+          <ArrowLeftCircleFill size={24} />
+        </button>
+        <button
+          className="control-btn"
+          onMouseDown={handleBackward}
+          onMouseUp={handleMoveStop}
+          onTouchStart={handleBackward}
+          onTouchEnd={handleMoveStop}
+          title="Backward"
+        >
+          <ArrowDownCircleFill size={24} />
+        </button>
+        <button
+          className="control-btn"
+          onMouseDown={handleRight}
+          onMouseUp={handleTurnStop}
+          onTouchStart={handleRight}
+          onTouchEnd={handleTurnStop}
+          title="Turn Right"
+        >
+          <ArrowRightCircleFill size={24} />
+        </button>
       </div>
     </Card>
   )

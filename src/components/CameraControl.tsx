@@ -1,46 +1,60 @@
 import React, { useEffect } from "react"
-import { Card, Button } from "react-bootstrap"
 import { useWebSocket } from "../contexts/WebSocketContext"
-import { sendCommand } from "../utils/websocket"
+import { Card } from "react-bootstrap"
 import {
   ArrowUpCircleFill,
-  ArrowDownCircleFill,
   ArrowLeftCircleFill,
+  ArrowDownCircleFill,
   ArrowRightCircleFill,
-  HouseFill,
+  HouseDoorFill,
   Camera,
 } from "react-bootstrap-icons"
 
 export const CameraControl: React.FC = () => {
-  const ws = useWebSocket()
+  const { sendMessage } = useWebSocket()
 
-  const handleMouseDown = (command: string) => {
-    sendCommand(ws, command)
+  const handleCameraMove = async (command: string) => {
+    try {
+      await sendMessage({ command })
+    } catch (error) {
+      console.error(`Failed to move camera (${command}):`, error)
+    }
   }
 
-  const handleMouseUp = (stopCommand: string) => {
-    sendCommand(ws, stopCommand)
+  const handleCameraStop = async (stopCommand: string) => {
+    try {
+      await sendMessage({ command: stopCommand })
+    } catch (error) {
+      console.error(`Failed to stop camera (${stopCommand}):`, error)
+    }
+  }
+
+  const handleCameraHome = async () => {
+    try {
+      await sendMessage({ command: "camera_home" })
+    } catch (error) {
+      console.error("Failed to home camera:", error)
+    }
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    // Prevent handling the event multiple times if key is held
-    if (event.repeat) return
+    if (event.repeat) return // Prevent key repeat
 
     switch (event.key.toLowerCase()) {
       case "i":
-        handleMouseDown("look_up")
-        break
-      case "j":
-        handleMouseDown("look_left")
+        handleCameraMove("look_up")
         break
       case "k":
-        handleMouseDown("look_down")
+        handleCameraMove("look_down")
+        break
+      case "j":
+        handleCameraMove("look_left")
         break
       case "l":
-        handleMouseDown("look_right")
+        handleCameraMove("look_right")
         break
       case "h":
-        sendCommand(ws, "camera_home")
+        handleCameraHome()
         break
       default:
         break
@@ -50,16 +64,12 @@ export const CameraControl: React.FC = () => {
   const handleKeyUp = (event: KeyboardEvent) => {
     switch (event.key.toLowerCase()) {
       case "i":
-        handleMouseUp("look_ud_stop")
+      case "k":
+        handleCameraStop("look_ud_stop")
         break
       case "j":
-        handleMouseUp("look_lr_stop")
-        break
-      case "k":
-        handleMouseUp("look_ud_stop")
-        break
       case "l":
-        handleMouseUp("look_lr_stop")
+        handleCameraStop("look_lr_stop")
         break
       default:
         break
@@ -73,70 +83,63 @@ export const CameraControl: React.FC = () => {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [])
+  }, []) // Empty dependency array since handlers use function references
 
   return (
-    <Card className="shadow-sm">
-      <Camera size={20} className="control-type-icon" />
-      <div className="camera-controls">
-        <div className="d-flex justify-content-center mb-2">
-          <Button
-            variant="info"
-            className="control-btn"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => handleMouseDown("look_up")}
-            onMouseUp={() => handleMouseUp("look_ud_stop")}
-            onTouchStart={() => handleMouseDown("look_up")}
-            onTouchEnd={() => handleMouseUp("look_ud_stop")}
-          >
-            <ArrowUpCircleFill size={24} />
-          </Button>
-        </div>
-        <div className="d-flex justify-content-center mb-2">
-          <Button
-            variant="info"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => handleMouseDown("look_left")}
-            onMouseUp={() => handleMouseUp("look_lr_stop")}
-            onTouchStart={() => handleMouseDown("look_left")}
-            onTouchEnd={() => handleMouseUp("look_lr_stop")}
-          >
-            <ArrowLeftCircleFill size={24} />
-          </Button>
-          <Button
-            variant="info"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => handleMouseDown("look_down")}
-            onMouseUp={() => handleMouseUp("look_ud_stop")}
-            onTouchStart={() => handleMouseDown("look_down")}
-            onTouchEnd={() => handleMouseUp("look_ud_stop")}
-          >
-            <ArrowDownCircleFill size={24} />
-          </Button>
-          <Button
-            variant="info"
-            className="control-btn mx-2"
-            style={{ transform: "scale(0.8)" }}
-            onMouseDown={() => handleMouseDown("look_right")}
-            onMouseUp={() => handleMouseUp("look_lr_stop")}
-            onTouchStart={() => handleMouseDown("look_right")}
-            onTouchEnd={() => handleMouseUp("look_lr_stop")}
-          >
-            <ArrowRightCircleFill size={24} />
-          </Button>
-        </div>
-        <div className="d-flex justify-content-center">
-          <Button
-            variant="warning"
-            className="control-btn"
-            style={{ transform: "scale(0.8)" }}
-            onClick={() => sendCommand(ws, "camera_home")}
-          >
-            <HouseFill size={24} />
-          </Button>
-        </div>
+    <Card>
+      <Camera size={24} className="control-type-icon" />
+      <div className="controls-grid">
+        <div></div>
+        <button
+          className="control-btn"
+          onMouseDown={() => handleCameraMove("look_up")}
+          onMouseUp={() => handleCameraStop("look_ud_stop")}
+          onTouchStart={() => handleCameraMove("look_up")}
+          onTouchEnd={() => handleCameraStop("look_ud_stop")}
+          title="Camera Up"
+        >
+          <ArrowUpCircleFill size={24} />
+        </button>
+        <div></div>
+        <button
+          className="control-btn"
+          onMouseDown={() => handleCameraMove("look_left")}
+          onMouseUp={() => handleCameraStop("look_lr_stop")}
+          onTouchStart={() => handleCameraMove("look_left")}
+          onTouchEnd={() => handleCameraStop("look_lr_stop")}
+          title="Camera Left"
+        >
+          <ArrowLeftCircleFill size={24} />
+        </button>
+        <button
+          className="control-btn"
+          onMouseDown={() => handleCameraMove("look_down")}
+          onMouseUp={() => handleCameraStop("look_ud_stop")}
+          onTouchStart={() => handleCameraMove("look_down")}
+          onTouchEnd={() => handleCameraStop("look_ud_stop")}
+          title="Camera Down"
+        >
+          <ArrowDownCircleFill size={24} />
+        </button>
+        <button
+          className="control-btn"
+          onMouseDown={() => handleCameraMove("look_right")}
+          onMouseUp={() => handleCameraStop("look_lr_stop")}
+          onTouchStart={() => handleCameraMove("look_right")}
+          onTouchEnd={() => handleCameraStop("look_lr_stop")}
+          title="Camera Right"
+        >
+          <ArrowRightCircleFill size={24} />
+        </button>
+        <div></div>
+        <button
+          className="control-btn"
+          onClick={handleCameraHome}
+          title="Camera Home Position"
+        >
+          <HouseDoorFill size={24} />
+        </button>
+        <div></div>
       </div>
     </Card>
   )

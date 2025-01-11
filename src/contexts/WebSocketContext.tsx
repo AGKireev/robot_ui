@@ -24,6 +24,7 @@ interface WebSocketContextType {
     warning: number
     danger: number
   }>
+  sendMessage: (message: any) => Promise<string>
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
@@ -31,6 +32,7 @@ const WebSocketContext = createContext<WebSocketContextType>({
   connectionStatus: "🔄 Connecting...",
   isConnected: false,
   status: [],
+  sendMessage: () => Promise.reject("WebSocket not initialized"),
 })
 
 export const WebSocketProvider: React.FC<{
@@ -223,14 +225,46 @@ export const WebSocketProvider: React.FC<{
     }
   }, [connectWebSocket, stopStatusUpdates])
 
+  const sendMessage = useCallback((message: any): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+        reject("WebSocket is not connected")
+        return
+      }
+
+      // For servo commands, we need to wait for the response
+      const isServoCommand =
+        typeof message === "object" && message.command?.startsWith("servo_")
+
+      if (isServoCommand) {
+        const messageHandler = (event: MessageEvent) => {
+          ws.current?.removeEventListener("message", messageHandler)
+          resolve(event.data)
+        }
+
+        ws.current.addEventListener("message", messageHandler)
+        ws.current.send(JSON.stringify(message))
+      } else {
+        // For other commands, just send and resolve
+        try {
+          ws.current.send(JSON.stringify(message))
+          resolve("sent")
+        } catch (error) {
+          reject(error)
+        }
+      }
+    })
+  }, [])
+
   const contextValue = useMemo(
     () => ({
       ws: isConnected ? ws.current : null,
       connectionStatus,
       isConnected,
       status,
+      sendMessage,
     }),
-    [isConnected, connectionStatus, status]
+    [isConnected, connectionStatus, status, sendMessage]
   )
 
   console.log("[WS Provider] Current status:", status)
@@ -249,7 +283,7 @@ export const useWebSocket = () => {
   if (!context) {
     throw new Error("useWebSocket must be used within a WebSocketProvider")
   }
-  return context.ws
+  return context
 }
 
 export const useConnectionStatus = () => {
